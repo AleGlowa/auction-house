@@ -1,0 +1,396 @@
+openapi: 3.0.0
+
+info:
+  title: Auction API
+  description: Interactions with auctions and its lots
+  version: 1.0.0
+
+tags:
+  - name: authentication
+    description: Authenticate users
+  - name: auctions
+    description: Interact with auctions
+  - name: lots
+    description: Interact with lots
+
+paths:
+  /auth:
+    parameters:
+      - $ref: "#/components/parameters/userId"
+    get:
+      tags:
+        - authentication
+      summary: Returns a jwt token
+      responses:
+        '200':
+          description: The returned generated jwt token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: The user isn't registered
+
+  /auctions:
+    get:
+      security:
+        - BearerAuth: []
+      tags:
+        - auctions
+      summary: Returns all auctions
+      responses:
+        '200':
+          description: All auctions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuctionResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+    post:
+      security:
+        - BearerAuth: []
+      tags:
+        - auctions
+      summary: Creates an auction
+      responses:
+        '200':
+          description: The created auction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuctionResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /auctions/view:
+    parameters:
+      - $ref: '#/components/parameters/queryAuctionId'
+    get:
+      security:
+        - BearerAuth: []
+      tags:
+        - auctions
+      summary: Returns an auction
+      responses:
+        '200':
+          description: The returned auction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuctionResponse'
+        '404':
+          description: Couldn't find the auction
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /auctions/{auctionId}:
+    parameters:
+      - $ref: '#/components/parameters/auctionId'
+    delete:
+      security:
+        - BearerAuth: []
+      tags:
+        - auctions
+      summary: Ends an auction
+      responses:
+        '200':
+          description: The auction's been ended or isn't started yet
+        '404':
+          description: Couldn't find the auction to end
+        '403':
+          description: Ending an auction by non-creator of the auction
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /auctions/{auctionId}/start:
+    parameters:
+      - $ref: '#/components/parameters/auctionId'
+    post:
+      security:
+        - BearerAuth: []
+      tags:
+        - auctions
+      summary: Start an auction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartAuctionRequest'
+      responses:
+        '200':
+          description: The auction's been started or was started before
+        '404':
+          description: Couldn't find the auction to start
+        '403':
+          description: Starting an auction by non-creator of the auction
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+
+  /lots:
+    post:
+      security:
+        - BearerAuth: []
+      tags:
+        - lots
+      summary: Creates a lot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLotRequest'
+      responses:
+        '200':
+          description: The created lot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LotResponse'
+        '400':
+          description: Couldn't create a lot, because the auction is open
+        '404':
+          description: Couldn't find the auction for which to create a lot
+        '403':
+          description: Creating an auction's lot by non-creator of the auction
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /lots/{lotId}:
+    parameters:
+      - $ref: '#/components/parameters/lotId'
+    patch:
+      security:
+        - BearerAuth: []
+      tags:
+        - lots
+      summary: Bid a lot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BidLotRequest'
+      responses:
+        '200':
+          description: The created bet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BidResponse'
+        '404':
+          description: Couldn't find the lot to bid
+        '403':
+          description: Bidding an auction's lot by a creator of the auction
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /lots/view:
+    parameters:
+      - $ref: '#/components/parameters/queryLotId'
+    get:
+      security:
+        - BearerAuth: []
+      tags:
+        - lots
+      summary: Returns a lot
+      responses:
+        '200':
+          description: The returned lot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LotResponse'
+        '404':
+          description: Couldn't find the lot
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+components:
+  parameters:
+
+    userId:
+      in: query
+      name: userId
+      schema:
+        type: integer
+        format: int64
+        example: 1
+
+    auctionId:
+      in: path
+      name: auctionId
+      required: true
+      schema:
+        type: string
+        format: byte
+        example: Ge6b
+
+    lotId:
+      in: path
+      name: lotId
+      required: true
+      schema:
+        type: string
+        format: byte
+        example: Ge6b
+
+    queryAuctionId:
+      in: query
+      name: id
+      required: true
+      schema:
+        type: string
+        format: byte
+        example: Ge6b
+
+    queryLotId:
+      in: query
+      name: id
+      required: true
+      schema:
+        type: string
+        format: byte
+        example: Ge6b
+
+  schemas:
+
+    TokenResponse:
+      type: object
+      properties:
+        token:
+          type: string
+      required:
+        - token
+
+    AuctionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: byte
+        creatorId:
+          type: integer
+          format: int64
+        lots:
+          type: array
+          items:
+            $ref: '#/components/schemas/LotResponse'
+        isOpen:
+          type: boolean
+        isDeleted:
+          type: boolean
+      required:
+        - id
+        - creatorId
+        - lots
+        - isOpen
+        - isDeleted
+
+    LotResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: byte
+          example: Ge6b
+        auctionId:
+          type: string
+          format: byte
+          example: Ge6b
+        startBid:
+          type: number
+        winner:
+          type: integer
+          format: int64
+          nullable: true
+        winningBid:
+          type: number
+          nullable: true
+        isDeleted:
+          type: boolean
+      required:
+        - id
+        - auctionId
+        - startBid
+        - winner
+        - winningBid
+        - isDeleted
+
+    BidResponse:
+      type: object
+      properties:
+        auctionId:
+          type: string
+          format: byte
+          example: Ge6b
+        lotId:
+          type: string
+          format: byte
+          example: Ge6b
+        userId:
+          type: integer
+          format: int64
+        value:
+          type: number
+        max:
+          type: number
+          nullable: true
+      required:
+        - auctionId
+        - lotId
+        - userId
+        - value
+
+    StartAuctionRequest:
+      type: object
+      properties:
+        howLong:
+          type: integer
+          format: int64
+          description: How long in seconds should an auction last
+          example: 60
+      required:
+        - howLong
+
+    CreateLotRequest:
+      type: object
+      properties:
+        auctionId:
+          type: string
+          format: byte
+          example: Ge6b
+        startBid:
+          type: number
+          example: 100
+      required:
+        - auctionId
+        - startBid
+
+    BidLotRequest:
+      type: object
+      properties:
+        value:
+          type: number
+          example: 200
+        isMax:
+          type: boolean
+          description: Whether a bid value should be consider as a max bid value
+          example: false
+      required:
+        - value
+        - isMax
+
+  responses:
+    UnauthorizedError:
+      description: Access token is missing or invalid
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

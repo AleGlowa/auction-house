@@ -1,0 +1,11 @@
+### Simple Build Tool
+.bsp/
+target/
+
+### JetBrains IDEs
+.idea/*
+
+### Metals IDE
+.metals/
+.vscode/
+.bloop
